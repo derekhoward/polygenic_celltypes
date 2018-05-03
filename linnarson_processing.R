@@ -2,10 +2,6 @@ library(readr)
 library(dplyr)
 library(magrittr)
 
-getwd()
-setwd('/Users/derek_howard/projects/polygenic_celltypes')
-source("./AUCFunction.R")
-
 table <- read_tsv('./l5_all.agg.tab', col_names = FALSE)
 
 table %<>% filter(!is.na(X1) | X8 == 'ClusterName')
@@ -32,5 +28,6 @@ linnarsson %<>%
 print(dim(linnarsson))
 linnarsson %<>% filter(!is.na(log1ExpZ))       
 print(dim(linnarsson))
+linnarsson %<>% select(-expression, -log1Expression)
 save(linnarsson, file='processed_zeisel.Rdata')
 
