@@ -6,12 +6,6 @@ getwd()
 setwd('/Users/derek_howard/projects/polygenic_celltypes')
 source("./AUCFunction.R")
 
-targetGeneList <- "Negraes et al. Table S5.hypenFixed.mouse.txt"
-#targetGeneList <- "Duncan et al. rs4622308.hypenFixed.mouse.txt"
-#targetGeneList <- "Lutter et al. Table S3.RestrictedEating.hypenFixed.mouse.txt"
-#targetGeneList <- "Lutter et al. Table S4.BingeEating.hypenFixed.mouse.txt"
-targetSymbols <- read_csv(paste0("./genelists/",targetGeneList), col_names=F)$X1
-
 table <- read_tsv('./l5_all.agg.tab', col_names = FALSE)
 
 table %<>% filter(!is.na(X1) | X8 == 'ClusterName')
