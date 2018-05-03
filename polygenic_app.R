@@ -1,9 +1,14 @@
+#devtools::install_github("hadley/multidplyr")
 library(shiny)
 library(dplyr)
 library(magrittr)
+library(multidplyr)
 source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata')
+linnarsson %<>% group_by(cluster_id)
+print("Done loading data")
+
 unique_genes <- unique(linnarsson$Gene)
 # Define UI for dataset viewer app ----
 ui <- fluidPage(
@@ -31,7 +36,7 @@ ui <- fluidPage(
       verbatimTextOutput("summary"),
       
       # Output: HTML table with requested number of observations ----
-      tableOutput("view")
+      dataTableOutput("view")
       
     )
   )
@@ -43,28 +48,33 @@ server <- function(input, output) {
   observe({
     if (input$submit > 0) {
       cleaned_gene_list <- isolate(process_input_genes(input$genelist))
-
       #find the celltypes which express input genes
       linnarsson %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
       
+      start <- Sys.time()
       #do AUROC with gene list
-      wilcoxTests <- linnarsson %>% group_by(cluster_id) %>% summarize(
-        pValue = wilcox.test(log1ExpZ ~ isTargetGene)$p.value, 
-        auc = auroc_analytic(rank(log1ExpZ), as.numeric(isTargetGene)))
-      
+      wilcoxTests <- linnarsson %>% partition(cluster_id) %>% summarize(
+        pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value, 
+        ) %>% collect()
+      print(paste0("Wilcox time taken:", Sys.time() - start))
+      aucs <- linnarsson %>% summarize(
+        auc = auroc_analytic(rank(log1ExpZ), as.numeric(isTargetGene))
+      ) 
+      print(paste0("AUCs time taken:", Sys.time() - start))
+      wilcoxTests <- inner_join(wilcoxTests, aucs)
+
       wilcoxTests %<>% arrange(-auc)
       
       output$summary <- renderPrint({
         #count of intersection of submitted genes with total gene list
-        print(sum(cleaned_gene_list %in% unique_genes))
+        cat(paste("Time taken:", round(Sys.time() - start), "seconds"))
+        cat(paste("\nGenes found in data:",sum(cleaned_gene_list %in% unique_genes), " of ", length(cleaned_gene_list)))
       })
       
-      # Show the first top observations ----
-      #output$view <- renderTable({
-      #  head(wilcoxTests)
-      output$view <- DT::dataTableOutput({
-       head(wilcoxTests)
-      })
+      output$view <- renderDataTable({
+        wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/doku.php?id=clusters:%s" target="_blank">%s</a>', cluster_id, cluster_id))
+        wilcoxTests
+      }, escape = FALSE)
       }
   })
 }
