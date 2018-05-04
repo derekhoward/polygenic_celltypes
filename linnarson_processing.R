@@ -17,8 +17,9 @@ table %<>% select(-one_of(dropcols))
 table[,2:length(colnames(table))] %<>% lapply(function(x) as.numeric(as.character(x)))
 
 #now melt
-linnarsson <- reshape2::melt(table, id.vars='Gene', variable.name='cluster_id', value.name='expression')
-linnarsson <- mutate(linnarsson, log1Expression=log(1+expression))
+linnarsson <- as_tibble(reshape2::melt(table, id.vars='Gene', variable.name='cluster_id', value.name='expression'))
+
+linnarsson %<>% mutate(log1Expression=log(1+expression))
 
 # zscore across genes
 linnarsson %<>% 
@@ -29,6 +30,15 @@ print(dim(linnarsson))
 linnarsson %<>% filter(!is.na(log1ExpZ))       
 print(dim(linnarsson))
 linnarsson %<>% select(-expression, -log1Expression)
+
+#some genes are duplicated - just average them
+linnarsson %<>% group_by(Gene, cluster_id) %>% summarize(
+  log1ExpZ = mean(log1ExpZ)
+)
+
+linnarsson %<>% group_by(cluster_id)
+linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZ)) %>% select(-log1ExpZ)
+
 save(linnarsson, file='processed_zeisel.Rdata')
 
 

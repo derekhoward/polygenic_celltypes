@@ -7,7 +7,6 @@ source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata', verbose=TRUE)
 linnarsson %<>% group_by(cluster_id)
-linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZ)) %>% select(-log1ExpZ)
 #linnarsson %<>% filter(cluster_id %in% head(unique(linnarsson$cluster_id)))
 cores <- 5
 cluster <- create_cluster(cores)
