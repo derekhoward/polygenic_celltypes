@@ -15,6 +15,8 @@ source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata', verbose=TRUE)
 descriptions <- read_csv("celltype_descriptions.csv")
+orders <- read_csv("png_tags.csv")
+
 cores <- 1
 
 if( Sys.info()['nodename'] == "RES-C02RF0T2.local" ) { 
@@ -135,21 +137,20 @@ server <- function(input, output) {
                                na.value = "grey50", guide = "colourbar", limits=c(0,1))
         
       )
-      
       gt = ggplotGrob(rasterPlot)
-      gt = gtable::gtable_filter(gt, "panel")  
-      
+      gt = gtable::gtable_filter(gt, "panel")
+
       img <- readPNG("./dendrogram-01.png")
-      
-      g <- rasterGrob(img, interpolate=TRUE) 
-      
-      treeImage <- ggplot() + 
-        geom_blank() + 
+
+      g <- rasterGrob(img, interpolate=TRUE)
+
+      treeImage <- ggplot() +
+        geom_blank() +
         annotation_custom(g, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf)
       gt_tree <- ggplotGrob(treeImage)
-      gt_tree <- gtable::gtable_filter(gt_tree, "panel")  
+      gt_tree <- gtable::gtable_filter(gt_tree, "panel")
       plot(gt_tree)
-      
+
       final_p <- plot_grid(gt_tree, gt, ncol=1, axis="rltb", rel_heights = c(0.95,.05), align="v")
       print(final_p)
     }, height=188, width = 922)
