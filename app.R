@@ -2,15 +2,18 @@
 library(shiny)
 library(dplyr)
 library(magrittr)
-library(multidplyr)
+#library(multidplyr)
 source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata')
 linnarsson %<>% group_by(cluster_id)
+#linnarsson %<>% filter(cluster_id %in% head(unique(linnarsson$cluster_id)))
+cores <- 1
+cluster <- create_cluster(cores)
 print("Done loading data")
 
 unique_genes <- unique(linnarsson$Gene)
-# Define UI for dataset viewer app ----
+
 ui <- fluidPage(
   
   # App title ----
@@ -44,25 +47,36 @@ ui <- fluidPage(
 
 # Define server logic process and output top celltypes ----
 server <- function(input, output) {
+  output$summary <- renderPrint({
+    print(paste("cores set to", cores))
+    print(get_default_cluster())
+    print(gc())
+  })
   
   observe({
     if (input$submit > 0) {
+      start <- Sys.time()
       cleaned_gene_list <- isolate(process_input_genes(input$genelist))
       #find the celltypes which express input genes
       linnarsson %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
       
-      start <- Sys.time()
+      print(paste0("Before time taken:", Sys.time() - start))
+      
       #do AUROC with gene list
-      wilcoxTests <- linnarsson %>% partition(cluster_id) %>% summarize(
-        pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value, 
-        ) %>% collect()
+      #wilcoxTests <- linnarsson %>% partition(cluster_id, cluster = cluster) %>% summarize(
+      #  pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value, 
+      #) %>% collect()
+      
+      wilcoxTests <- linnarsson %>% group_by(cluster_id) %>% summarize(
+        pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value
+      ) 
       print(paste0("Wilcox time taken:", Sys.time() - start))
       aucs <- linnarsson %>% summarize(
         auc = auroc_analytic(rank(log1ExpZ), as.numeric(isTargetGene))
       ) 
       print(paste0("AUCs time taken:", Sys.time() - start))
       wilcoxTests <- inner_join(wilcoxTests, aucs)
-
+      
       wilcoxTests %<>% arrange(-auc)
       
       output$summary <- renderPrint({
@@ -73,9 +87,10 @@ server <- function(input, output) {
       
       output$view <- renderDataTable({
         wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/doku.php?id=clusters:%s" target="_blank">%s</a>', cluster_id, cluster_id))
+        wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3))
         wilcoxTests
       }, escape = FALSE)
-      }
+    }
   })
 }
 
