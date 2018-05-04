@@ -19,7 +19,7 @@ table[,2:length(colnames(table))] %<>% lapply(function(x) as.numeric(as.characte
 
 cell_type_info <- rbind(colnames(table[2:266]), descriptions)
 cell_type_info <- t(cell_type_info)
-colnames(cell_type_info) <- c('cell_type', 'description')
+colnames(cell_type_info) <- c('cluster_id', 'description')
 write.csv(cell_type_info, file = "celltype_descriptions.csv", row.names=FALSE)
 #now melt
 linnarsson <- as_tibble(reshape2::melt(table, id.vars='Gene', variable.name='cluster_id', value.name='expression'))

@@ -1,20 +1,29 @@
+library(readr)
 library(reshape2)
 library(doMC)
 library(shiny)
 library(dplyr)
 library(magrittr)
+library(shinyjs)
+
 source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata', verbose=TRUE)
+descriptions <- read_csv("celltype_descriptions.csv")
+cores <- 1
 
-cores <- 8
+if( Sys.info()['nodename'] == "RES-C02RF0T2.local" ) { 
+  cores <- 4
+}
+
+
 registerDoMC(cores=cores)
 print("Done loading data")
 
 unique_genes <- rownames(linnarssonMatrix)
 
 ui <- fluidPage(
-  
+  shinyjs::useShinyjs(),  
   # App title ----
   titlePanel("Polygenic celltypes in mouse"),
   
@@ -49,18 +58,22 @@ ui <- fluidPage(
 # Define server logic process and output top celltypes ----
 server <- function(input, output) {
   output$summary <- renderPrint({
-    print(paste("cores set to", cores))
+    cat(paste("cores set to", cores))
+    cat("\nResults will load here when complete")
+    cat("\n")
     print(gc())
+    print(Sys.info()['nodename'])
   })
   
   observe({
     if (input$submit > 0) {
+      shinyjs::disable("submit") 
       start <- Sys.time()
       cleaned_gene_list <- isolate(process_input_genes(input$genelist))
       if (input$species == 'Human') {
         cleaned_gene_list <- convert_genes(cleaned_gene_list)
       }
-
+      
       print(paste0("Before time taken:", Sys.time() - start))
 
       #for indices - use dplyr for ease
@@ -69,6 +82,8 @@ server <- function(input, output) {
       forIndices %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
       targetIndices <- forIndices$isTargetGene
       
+      
+
       wilcoxTests <- foreach(oneCol=iter(linnarssonMatrix, by='col'), .combine=rbind) %dopar% {
         data.frame(auc = auroc_analytic(oneCol, as.numeric(targetIndices)), 
                    pValue=wilcox.test(oneCol[targetIndices], oneCol[!targetIndices], conf.int = F)$p.value)
@@ -79,7 +94,7 @@ server <- function(input, output) {
       #wilcoxTests <- inner_join(wilcoxTests, aucs)
       
       #put descriptions in here
-      
+      wilcoxTests <- inner_join(descriptions, wilcoxTests)
       wilcoxTests %<>% arrange(-auc)
       
       output$summary <- renderPrint({
@@ -94,6 +109,8 @@ server <- function(input, output) {
         wilcoxTests
       }, escape = FALSE)
     }
+    shinyjs::enable("submit")
+    
   })
 }
 
