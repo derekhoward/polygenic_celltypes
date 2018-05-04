@@ -44,6 +44,13 @@ ui <- fluidPage(
     
     # Main panel for displaying outputs ----
     mainPanel(
+      div(id = "main",
+      p("This tool is made possible by data from:"),
+      a("Molecular architecture of the mouse nervous system", href="https://doi.org/10.1101/294918"),
+      p(" by Amit Zeisel, Hannah Hochgerner, Peter Lonnerberg, Anna Johnsson, Fatima Memic, Job van der Zwan, Martin Haring, Emelie Braun, Lars Borm, Gioele La Manno, Simone Codeluppi, Alessandro Furlan, Nathan Skene, Kenneth D Harris, Jens Hjerling Leffler, Ernest Arenas, Patrik Ernfors, Ulrika Marklund, and Sten Linnarsson."),
+      br(),
+      br()),
+      
       
       # Output: Verbatim text for data summary ----
       verbatimTextOutput("summary"),
@@ -67,6 +74,7 @@ server <- function(input, output) {
   
   observe({
     if (input$submit > 0) {
+      shinyjs::hide("main")
       shinyjs::disable("submit") 
       start <- Sys.time()
       cleaned_gene_list <- isolate(process_input_genes(input$genelist))
@@ -91,16 +99,16 @@ server <- function(input, output) {
       wilcoxTests$cluster_id <- colnames(linnarssonMatrix)
 
       print(paste0("Wilcox time taken:", Sys.time() - start))
-      #wilcoxTests <- inner_join(wilcoxTests, aucs)
-      
-      #put descriptions in here
+
+      #add descriptions
       wilcoxTests <- inner_join(descriptions, wilcoxTests)
       wilcoxTests %<>% arrange(-auc)
+      wilcoxTests %<>% mutate(adjusted_P = p.adjust(pValue))
       
       output$summary <- renderPrint({
         #count of intersection of submitted genes with total gene list
         cat(paste("Time taken:", round(Sys.time() - start), "seconds"))
-        cat(paste("\nGenes found in data:",sum(cleaned_gene_list %in% unique_genes), " of ", length(cleaned_gene_list)))
+        cat(paste("\nGenes found in data:",sum(cleaned_gene_list %in% unique_genes), "of", length(cleaned_gene_list)))
       })
       
       output$view <- renderDataTable({
