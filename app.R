@@ -89,8 +89,6 @@ server <- function(input, output) {
     forIndices %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
     targetIndices <- forIndices$isTargetGene
     
-    
-    
     wilcoxTests <- foreach(oneCol=iter(linnarssonMatrix, by='col'), .combine=rbind) %dopar% {
       data.frame(auc = auroc_analytic(oneCol, as.numeric(targetIndices)), 
                  pValue=wilcox.test(oneCol[targetIndices], oneCol[!targetIndices], conf.int = F)$p.value)
@@ -102,8 +100,7 @@ server <- function(input, output) {
     #add descriptions
     wilcoxTests <- inner_join(descriptions, wilcoxTests)
     wilcoxTests %<>% arrange(-auc)
-    wilcoxTests %<>% mutate(adjusted_P = p.adjust(pValue))
-    
+
     output$summary <- renderPrint({
       #count of intersection of submitted genes with total gene list
       cat(paste("Time taken:", round(Sys.time() - start), "seconds"))
@@ -112,7 +109,7 @@ server <- function(input, output) {
     
     output$view <- renderDataTable({
       wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/doku.php?id=clusters:%s" target="_blank">%s</a>', cluster_id, cluster_id))
-      wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3))
+      wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3), adjusted_P = signif(p.adjust(pValue), digits=3))
       wilcoxTests
     }, escape = FALSE)
     shinyjs::enable("submit")

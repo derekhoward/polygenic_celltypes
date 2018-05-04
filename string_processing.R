@@ -8,7 +8,7 @@ process_input_genes <- function(input_genes) {
 
 convert_genes <- function(input_genes) {
   mouse_genes <- human2mouse(input_genes)
-  return(mouse_genes$mouseGene)
+  return(unique(mouse_genes$mouseGene))
 }
 
 
