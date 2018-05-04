@@ -9,7 +9,6 @@ library(doMC)
 registerDoMC(cores=4)
 
 #todo - set rank to the proper indices
-#set colors to dark blue to dark red with white at AUC = 0.5
 
 load('./processed_zeisel.Rdata', verbose=TRUE)
 descriptions <- read_csv("celltype_descriptions.csv")
@@ -37,9 +36,13 @@ wilcoxTests$rank <- 1:265 #to be based on the true ranking/indices
 wilcoxTests$dummyY <- 1 
 
 #plot with all the extras    
+
 (rasterPlot <- ggplot(wilcoxTests, aes(x = rank, y = dummyY)) +
     geom_tile(aes(fill = auc)) +
-    coord_cartesian(expand=F) 
+    coord_cartesian(expand=F) +
+    scale_fill_gradientn(colours = c("darkblue", "white","darkred"), values = c(0, .5, 1), space = "Lab",
+                           na.value = "grey50", guide = "colourbar")
+  
     )
 
 #plot AUC with no margins
