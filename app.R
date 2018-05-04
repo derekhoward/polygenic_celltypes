@@ -1,19 +1,17 @@
-#devtools::install_github("hadley/multidplyr")
+library(reshape2)
+library(doMC)
 library(shiny)
 library(dplyr)
 library(magrittr)
-library(multidplyr)
 source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata', verbose=TRUE)
-linnarsson %<>% group_by(cluster_id)
-#linnarsson %<>% filter(cluster_id %in% head(unique(linnarsson$cluster_id)))
-cores <- 5
-cluster <- create_cluster(cores)
-set_default_cluster(cluster)
+
+cores <- 8
+registerDoMC(cores=cores)
 print("Done loading data")
 
-unique_genes <- unique(linnarsson$Gene)
+unique_genes <- rownames(linnarssonMatrix)
 
 ui <- fluidPage(
   
@@ -52,7 +50,6 @@ ui <- fluidPage(
 server <- function(input, output) {
   output$summary <- renderPrint({
     print(paste("cores set to", cores))
-    print(get_default_cluster())
     print(gc())
   })
   
@@ -63,21 +60,25 @@ server <- function(input, output) {
       if (input$species == 'Human') {
         cleaned_gene_list <- convert_genes(cleaned_gene_list)
       }
-      #find the celltypes which express input genes
-      linnarsson %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
-      
+
       print(paste0("Before time taken:", Sys.time() - start))
+
+      #for indices - use dplyr for ease
+      forIndices <- linnarssonMatrix[,1, drop=F]
+      forIndices$Gene <- rownames(linnarssonMatrix)
+      forIndices %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
+      targetIndices <- forIndices$isTargetGene
       
-      #do AUROC with gene list
-      wilcoxTests <- linnarsson %>% partition(cluster_id) %>% summarize(
-        pValue = wilcox.test(log1ExpZRank ~ isTargetGene, correct=F, conf.int=F)$p.value, 
-      ) %>% collect()
+      wilcoxTests <- foreach(oneCol=iter(linnarssonMatrix, by='col'), .combine=rbind) %dopar% {
+        data.frame(auc = auroc_analytic(oneCol, as.numeric(targetIndices)), 
+                   pValue=wilcox.test(oneCol[targetIndices], oneCol[!targetIndices], conf.int = F)$p.value)
+      }
+      wilcoxTests$cluster_id <- colnames(linnarssonMatrix)
+
       print(paste0("Wilcox time taken:", Sys.time() - start))
-      aucs <- linnarsson %>% summarize(
-        auc = auroc_analytic(log1ExpZRank, as.numeric(isTargetGene))
-      ) 
-      print(paste0("AUCs time taken:", Sys.time() - start))
-      wilcoxTests <- inner_join(wilcoxTests, aucs)
+      #wilcoxTests <- inner_join(wilcoxTests, aucs)
+      
+      #put descriptions in here
       
       wilcoxTests %<>% arrange(-auc)
       

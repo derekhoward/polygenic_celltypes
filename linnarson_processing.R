@@ -39,6 +39,10 @@ linnarsson %<>% group_by(Gene, cluster_id) %>% summarize(
 linnarsson %<>% group_by(cluster_id)
 linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZ)) %>% select(-log1ExpZ)
 
-save(linnarsson, file='processed_zeisel.Rdata')
+linnarssonMatrix <- dcast(linnarsson, Gene ~ cluster_id, value.var = "log1ExpZRank")
+rownames(linnarssonMatrix) <- linnarssonMatrix$Gene
+linnarssonMatrix$Gene <- NULL
+
+save(linnarssonMatrix, file='processed_zeisel.Rdata')
 
 
