@@ -25,3 +25,4 @@ vignettes/*.pdf
 .Rproj.user
 l5_all.agg.tab
 processed_zeisel.Rdata
+rsconnect
