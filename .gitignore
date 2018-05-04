@@ -26,3 +26,4 @@ vignettes/*.pdf
 l5_all.agg.tab
 processed_zeisel.Rdata
 rsconnect
+celltype_descriptions.csv
