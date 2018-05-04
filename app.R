@@ -2,14 +2,15 @@
 library(shiny)
 library(dplyr)
 library(magrittr)
-#library(multidplyr)
+library(multidplyr)
 source("./string_processing.R")
 source("./AUCFunction.R")
 load('./processed_zeisel.Rdata')
 linnarsson %<>% group_by(cluster_id)
 #linnarsson %<>% filter(cluster_id %in% head(unique(linnarsson$cluster_id)))
-cores <- 1
+cores <- 2
 cluster <- create_cluster(cores)
+set_default_cluster(cluster)
 print("Done loading data")
 
 unique_genes <- unique(linnarsson$Gene)
@@ -63,13 +64,9 @@ server <- function(input, output) {
       print(paste0("Before time taken:", Sys.time() - start))
       
       #do AUROC with gene list
-      #wilcoxTests <- linnarsson %>% partition(cluster_id, cluster = cluster) %>% summarize(
-      #  pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value, 
-      #) %>% collect()
-      
-      wilcoxTests <- linnarsson %>% group_by(cluster_id) %>% summarize(
-        pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value
-      ) 
+      wilcoxTests <- linnarsson %>% partition(cluster_id) %>% summarize(
+        pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value, 
+      ) %>% collect()
       print(paste0("Wilcox time taken:", Sys.time() - start))
       aucs <- linnarsson %>% summarize(
         auc = auroc_analytic(rank(log1ExpZ), as.numeric(isTargetGene))
