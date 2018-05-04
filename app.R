@@ -30,7 +30,9 @@ ui <- fluidPage(
                     label = "Input your gene list:",
                     value = 'Calca',
                     rows=5),
-      actionButton("submit", "Submit")
+      actionButton("submit", "Submit"),
+      selectInput('species', 'Species:',
+                  choices=c('Human', 'Mouse'))
     ),
     
     # Main panel for displaying outputs ----
@@ -58,6 +60,9 @@ server <- function(input, output) {
     if (input$submit > 0) {
       start <- Sys.time()
       cleaned_gene_list <- isolate(process_input_genes(input$genelist))
+      if (input$species == 'Human') {
+        cleaned_gene_list <- convert_genes(cleaned_gene_list)
+      }
       #find the celltypes which express input genes
       linnarsson %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
       
