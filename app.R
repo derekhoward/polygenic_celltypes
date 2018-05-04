@@ -72,54 +72,53 @@ server <- function(input, output) {
     print(Sys.info()['nodename'])
   })
   
-  observe({
-    if (input$submit > 0) {
-      shinyjs::hide("main")
-      shinyjs::disable("submit") 
-      start <- Sys.time()
-      cleaned_gene_list <- isolate(process_input_genes(input$genelist))
-      if (input$species == 'Human') {
-        cleaned_gene_list <- convert_genes(cleaned_gene_list)
-      }
-      
-      print(paste0("Before time taken:", Sys.time() - start))
-
-      #for indices - use dplyr for ease
-      forIndices <- linnarssonMatrix[,1, drop=F]
-      forIndices$Gene <- rownames(linnarssonMatrix)
-      forIndices %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
-      targetIndices <- forIndices$isTargetGene
-      
-      
-
-      wilcoxTests <- foreach(oneCol=iter(linnarssonMatrix, by='col'), .combine=rbind) %dopar% {
-        data.frame(auc = auroc_analytic(oneCol, as.numeric(targetIndices)), 
-                   pValue=wilcox.test(oneCol[targetIndices], oneCol[!targetIndices], conf.int = F)$p.value)
-      }
-      wilcoxTests$cluster_id <- colnames(linnarssonMatrix)
-
-      print(paste0("Wilcox time taken:", Sys.time() - start))
-
-      #add descriptions
-      wilcoxTests <- inner_join(descriptions, wilcoxTests)
-      wilcoxTests %<>% arrange(-auc)
-      wilcoxTests %<>% mutate(adjusted_P = p.adjust(pValue))
-      
-      output$summary <- renderPrint({
-        #count of intersection of submitted genes with total gene list
-        cat(paste("Time taken:", round(Sys.time() - start), "seconds"))
-        cat(paste("\nGenes found in data:",sum(cleaned_gene_list %in% unique_genes), "of", length(cleaned_gene_list)))
-      })
-      
-      output$view <- renderDataTable({
-        wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/doku.php?id=clusters:%s" target="_blank">%s</a>', cluster_id, cluster_id))
-        wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3))
-        wilcoxTests
-      }, escape = FALSE)
+  observeEvent(input$submit, {
+    shinyjs::hide("main")
+    shinyjs::disable("submit") 
+    start <- Sys.time()
+    cleaned_gene_list <- isolate(process_input_genes(input$genelist))
+    if (input$species == 'Human') {
+      cleaned_gene_list <- convert_genes(cleaned_gene_list)
     }
-    shinyjs::enable("submit")
     
-  })
+    print(paste0("Before time taken:", Sys.time() - start))
+    
+    #for indices - use dplyr for ease
+    forIndices <- linnarssonMatrix[,1, drop=F]
+    forIndices$Gene <- rownames(linnarssonMatrix)
+    forIndices %<>% mutate(isTargetGene = Gene %in% cleaned_gene_list)
+    targetIndices <- forIndices$isTargetGene
+    
+    
+    
+    wilcoxTests <- foreach(oneCol=iter(linnarssonMatrix, by='col'), .combine=rbind) %dopar% {
+      data.frame(auc = auroc_analytic(oneCol, as.numeric(targetIndices)), 
+                 pValue=wilcox.test(oneCol[targetIndices], oneCol[!targetIndices], conf.int = F)$p.value)
+    }
+    wilcoxTests$cluster_id <- colnames(linnarssonMatrix)
+    
+    print(paste0("Wilcox time taken:", Sys.time() - start))
+    
+    #add descriptions
+    wilcoxTests <- inner_join(descriptions, wilcoxTests)
+    wilcoxTests %<>% arrange(-auc)
+    wilcoxTests %<>% mutate(adjusted_P = p.adjust(pValue))
+    
+    output$summary <- renderPrint({
+      #count of intersection of submitted genes with total gene list
+      cat(paste("Time taken:", round(Sys.time() - start), "seconds"))
+      cat(paste("\nGenes found in data:",sum(cleaned_gene_list %in% unique_genes), "of", length(cleaned_gene_list)))
+    })
+    
+    output$view <- renderDataTable({
+      wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/doku.php?id=clusters:%s" target="_blank">%s</a>', cluster_id, cluster_id))
+      wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3))
+      wilcoxTests
+    }, escape = FALSE)
+    shinyjs::enable("submit")
+  }
+  
+  )
 }
 
 shinyApp(ui, server)
