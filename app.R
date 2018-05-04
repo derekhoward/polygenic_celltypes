@@ -8,7 +8,7 @@ source("./AUCFunction.R")
 load('./processed_zeisel.Rdata')
 linnarsson %<>% group_by(cluster_id)
 #linnarsson %<>% filter(cluster_id %in% head(unique(linnarsson$cluster_id)))
-cores <- 2
+cores <- 5
 cluster <- create_cluster(cores)
 set_default_cluster(cluster)
 print("Done loading data")
@@ -30,9 +30,9 @@ ui <- fluidPage(
                     label = "Input your gene list:",
                     value = 'Calca',
                     rows=5),
-      actionButton("submit", "Submit"),
       selectInput('species', 'Species:',
-                  choices=c('Human', 'Mouse'))
+                  choices=c('Mouse', 'Human')),
+      actionButton("submit", "Submit")
     ),
     
     # Main panel for displaying outputs ----
