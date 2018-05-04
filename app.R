@@ -5,8 +5,9 @@ library(magrittr)
 library(multidplyr)
 source("./string_processing.R")
 source("./AUCFunction.R")
-load('./processed_zeisel.Rdata')
+load('./processed_zeisel.Rdata', verbose=TRUE)
 linnarsson %<>% group_by(cluster_id)
+linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZ)) %>% select(-log1ExpZ)
 #linnarsson %<>% filter(cluster_id %in% head(unique(linnarsson$cluster_id)))
 cores <- 5
 cluster <- create_cluster(cores)
@@ -70,11 +71,11 @@ server <- function(input, output) {
       
       #do AUROC with gene list
       wilcoxTests <- linnarsson %>% partition(cluster_id) %>% summarize(
-        pValue = wilcox.test(log1ExpZ ~ isTargetGene, correct=F, conf.int=F)$p.value, 
+        pValue = wilcox.test(log1ExpZRank ~ isTargetGene, correct=F, conf.int=F)$p.value, 
       ) %>% collect()
       print(paste0("Wilcox time taken:", Sys.time() - start))
       aucs <- linnarsson %>% summarize(
-        auc = auroc_analytic(rank(log1ExpZ), as.numeric(isTargetGene))
+        auc = auroc_analytic(log1ExpZRank, as.numeric(isTargetGene))
       ) 
       print(paste0("AUCs time taken:", Sys.time() - start))
       wilcoxTests <- inner_join(wilcoxTests, aucs)
