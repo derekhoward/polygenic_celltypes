@@ -12,6 +12,7 @@ registerDoMC(cores=4)
 
 load('./processed_zeisel.Rdata', verbose=TRUE)
 descriptions <- read_csv("celltype_descriptions.csv")
+orders <- read_csv("png_tags.csv")
 cores <- 1
 
 cleaned_gene_list <- c("Gpr151")
@@ -32,12 +33,12 @@ wilcoxTests %<>% arrange(-auc)
 wilcoxTests %<>% mutate(adjusted_P = p.adjust(pValue))
 
 wilcoxTests %<>% sample_n(size = nrow(wilcoxTests))
-wilcoxTests$rank <- 1:265 #to be based on the true ranking/indices
+wilcoxTests <- inner_join(wilcoxTests, orders)
 wilcoxTests$dummyY <- 1 
 
 #plot with all the extras    
 
-(rasterPlot <- ggplot(wilcoxTests, aes(x = rank, y = dummyY)) +
+(rasterPlot <- ggplot(wilcoxTests, aes(x = index_in_png, y = dummyY)) +
     geom_tile(aes(fill = auc)) +
     coord_cartesian(expand=F) +
     scale_fill_gradientn(colours = c("darkblue", "white","darkred"), values = c(0, .5, 1), space = "Lab",
@@ -46,7 +47,7 @@ wilcoxTests$dummyY <- 1
     )
 
 #plot AUC with no margins
-(rasterPlot <- ggplot(pValues, aes(x = rank, y = dummyY)) +
+(rasterPlot <- ggplot(pValues, aes(x = index_in_png, y = dummyY)) +
     geom_tile(aes(fill = pValue)) )
 
 gt = ggplotGrob(rasterPlot)
@@ -56,4 +57,4 @@ gt = gtable::gtable_filter(gt, "panel")
 # Draw it
 grid.newpage()
 grid.draw(gt)
-
+plot(gt)
