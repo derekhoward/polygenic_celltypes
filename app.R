@@ -1,3 +1,8 @@
+library(ggplot2)
+library(grid)
+library(png)
+library(cowplot)
+
 library(readr)
 library(reshape2)
 library(doMC)
@@ -54,7 +59,9 @@ ui <- fluidPage(
       
       # Output: Verbatim text for data summary ----
       verbatimTextOutput("summary"),
-      
+      br(),
+      plotOutput("plot"),#,  width = "100%"),
+      br(),
       # Output: HTML table with requested number of observations ----
       dataTableOutput("view")
       
@@ -112,8 +119,44 @@ server <- function(input, output) {
       wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3), adjusted_P = signif(p.adjust(pValue), digits=3))
       wilcoxTests
     }, escape = FALSE)
+    
+    #Figure
+    output$plot <- reactivePlot(function() {
+      forPlot <- wilcoxTests %>% select(cluster_id, auc)
+      forPlot <- inner_join(forPlot, orders)
+      forPlot$dummyY <- 1 
+      
+      #plot with all the extras    
+      
+      (rasterPlot <- ggplot(forPlot, aes(x = index_in_png, y = dummyY)) +
+          geom_tile(aes(fill = auc)) +
+          coord_cartesian(expand=F) +
+          scale_fill_gradientn(colours = c("darkblue", "white","darkred"), values = c(0, .5, 1), space = "Lab",
+                               na.value = "grey50", guide = "colourbar", limits=c(0,1))
+        
+      )
+      
+      gt = ggplotGrob(rasterPlot)
+      gt = gtable::gtable_filter(gt, "panel")  
+      
+      img <- readPNG("./dendrogram-01.png")
+      
+      g <- rasterGrob(img, interpolate=TRUE) 
+      
+      treeImage <- ggplot() + 
+        geom_blank() + 
+        annotation_custom(g, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf)
+      gt_tree <- ggplotGrob(treeImage)
+      gt_tree <- gtable::gtable_filter(gt_tree, "panel")  
+      plot(gt_tree)
+      
+      final_p <- plot_grid(gt_tree, gt, ncol=1, axis="rltb", rel_heights = c(0.95,.05), align="v")
+      print(final_p)
+    }, height=188, width = 922)
+    
     shinyjs::enable("submit")
   }
+  
   
   )
 }

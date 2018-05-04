@@ -32,23 +32,20 @@ wilcoxTests <- inner_join(descriptions, wilcoxTests)
 wilcoxTests %<>% arrange(-auc)
 wilcoxTests %<>% mutate(adjusted_P = p.adjust(pValue))
 
-wilcoxTests %<>% sample_n(size = nrow(wilcoxTests))
-wilcoxTests <- inner_join(wilcoxTests, orders)
-wilcoxTests$dummyY <- 1 
+forPlot <- wilcoxTests %>% select(cluster_id, auc)
+forPlot <- inner_join(forPlot, orders)
+forPlot$dummyY <- 1 
 
 #plot with all the extras    
 
-(rasterPlot <- ggplot(wilcoxTests, aes(x = index_in_png, y = dummyY)) +
+(rasterPlot <- ggplot(forPlot, aes(x = index_in_png, y = dummyY)) +
     geom_tile(aes(fill = auc)) +
     coord_cartesian(expand=F) +
     scale_fill_gradientn(colours = c("darkblue", "white","darkred"), values = c(0, .5, 1), space = "Lab",
-                           na.value = "grey50", guide = "colourbar")
+                           na.value = "grey50", guide = "colourbar", limits=c(0,1))
   
     )
 
-#plot AUC with no margins
-(rasterPlot <- ggplot(pValues, aes(x = index_in_png, y = dummyY)) +
-    geom_tile(aes(fill = pValue)) )
 
 gt = ggplotGrob(rasterPlot)
 
@@ -58,3 +55,18 @@ gt = gtable::gtable_filter(gt, "panel")
 grid.newpage()
 grid.draw(gt)
 plot(gt)
+
+library(png)
+library(cowplot)
+img <- readPNG("./dendrogram-01.png")
+
+g <- rasterGrob(img, interpolate=TRUE) 
+
+treeImage <- ggplot() + 
+  geom_blank() + 
+  annotation_custom(g, xmin = -Inf, xmax = Inf, ymin = -Inf, ymax = Inf)
+gt_tree <- ggplotGrob(treeImage)
+gt_tree <- gtable::gtable_filter(gt_tree, "panel")  
+plot(gt_tree)
+
+plot_grid(gt_tree, gt, ncol=1, axis="rlt", rel_heights = c(0.95,.05), align="vh")
