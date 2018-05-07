@@ -1,6 +1,8 @@
 #todo
 #filter genome for those reachable from human genes when using human genes as input
 #have a better dendrogram
+#one-sided p for enrichment, not depletion
+#switch reactivePlot to renderPlot
 
 library(ggplot2)
 library(grid)
@@ -47,8 +49,8 @@ ui <- fluidPage(
       # Input: Selector for choosing dataset ----
       textAreaInput(inputId = "genelist",
                     label = "Input your gene list:",
-                    value = 'Calca',
-                    rows=5),
+                    value = 'Mag\nMobp\nMog\nMbp\nOmg',
+                    rows=7),
       selectInput('species', 'Species:',
                   choices=c('Mouse', 'Human')),
       actionButton("submit", "Submit")
@@ -160,7 +162,7 @@ server <- function(input, output) {
       plot(gt_tree)
 
       final_p <- plot_grid(gt_tree, gt, ncol=1, axis="rltb", rel_heights = c(0.95,.05), align="v")
-      print(final_p)
+      return(final_p)
     }, height=188, width = 922)
     
     shinyjs::enable("submit")
