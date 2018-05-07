@@ -1,3 +1,7 @@
+#todo
+#filter genome for those reachable from human genes when using human genes as input
+#have a better dendrogram
+
 library(ggplot2)
 library(grid)
 library(png)
@@ -30,9 +34,10 @@ print("Done loading data")
 unique_genes <- rownames(linnarssonMatrix)
 
 ui <- fluidPage(
-  shinyjs::useShinyjs(),  
+  shinyjs::useShinyjs(),
+  tags$head(includeHTML("google-analytics.html")),
   # App title ----
-  titlePanel("Polygenic celltypes in mouse"),
+  titlePanel("Polygenic celltype tester for the mouse nervous system"),
   
   # Sidebar layout with a input and output definitions ----
   sidebarLayout(
@@ -52,9 +57,12 @@ ui <- fluidPage(
     # Main panel for displaying outputs ----
     mainPanel(
       div(id = "main",
-      p("This tool is made possible by data from:"),
+      p("This tool is made possible by data and the dendrogram from:"),
       a("Molecular architecture of the mouse nervous system", href="https://doi.org/10.1101/294918"),
       p(" by Amit Zeisel, Hannah Hochgerner, Peter Lonnerberg, Anna Johnsson, Fatima Memic, Job van der Zwan, Martin Haring, Emelie Braun, Lars Borm, Gioele La Manno, Simone Codeluppi, Alessandro Furlan, Nathan Skene, Kenneth D Harris, Jens Hjerling Leffler, Ernest Arenas, Patrik Ernfors, Ulrika Marklund, and Sten Linnarsson."),
+      br(),
+      p("This tool was made by Derek Howard, Navona Calarco and Leon French during BrainHack 2018 Toronto."),
+      a("Source code", href="https://github.com/derekhoward/polygenic_celltypes"),
       br(),
       br()),
       
