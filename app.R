@@ -127,7 +127,7 @@ server <- function(input, output) {
     })
     
     output$view <- renderDataTable({
-      wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/doku.php?id=clusters:%s" target="_blank">%s</a>', cluster_id, cluster_id))
+      wilcoxTests %<>% mutate(cluster_id = sprintf('<a href="http://mousebrain.org/celltypes/%s.html" target="_blank">%s</a>', cluster_id, cluster_id))
       wilcoxTests %<>% mutate(pValue = signif(pValue, digits=3), auc = signif(auc, digits=3), adjusted_P = signif(p.adjust(pValue), digits=3))
       wilcoxTests
     }, escape = FALSE)
