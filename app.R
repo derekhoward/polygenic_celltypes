@@ -8,6 +8,7 @@ library(ggplot2)
 library(grid)
 library(png)
 library(cowplot)
+library(homologene)
 
 library(readr)
 library(reshape2)
@@ -33,7 +34,8 @@ if( Sys.info()['nodename'] == "RES-C02RF0T2.local" ) {
 registerDoMC(cores=cores)
 print("Done loading data")
 
-unique_genes <- rownames(linnarssonMatrix)
+unique_genes_all <- rownames(linnarssonMatrixMouse)
+unique_genes_human_reachable <- mouse2human(unique_genes_all)$mouseGene
 
 ui <- fluidPage(
   shinyjs::useShinyjs(),
@@ -96,8 +98,14 @@ server <- function(input, output) {
     shinyjs::disable("submit") 
     start <- Sys.time()
     cleaned_gene_list <- isolate(process_input_genes(input$genelist))
+    
     if (input$species == 'Human') {
       cleaned_gene_list <- convert_genes(cleaned_gene_list)
+      unique_genes <- unique_genes_human_reachable
+      linnarssonMatrix <- linnarssonMatrixHumanReachable
+    } else {
+      unique_genes <- unique_genes_all
+      linnarssonMatrix <- linnarssonMatrixMouse
     }
     
     print(paste0("Before time taken:", Sys.time() - start))
@@ -124,6 +132,7 @@ server <- function(input, output) {
       #count of intersection of submitted genes with total gene list
       cat(paste("Time taken:", round(Sys.time() - start), "seconds"))
       cat(paste("\nGenes found in data:",sum(cleaned_gene_list %in% unique_genes), "of", length(cleaned_gene_list)))
+      cat(paste("\nUsing background set of", length(unique_genes), "genes"))
     })
     
     output$view <- renderDataTable({

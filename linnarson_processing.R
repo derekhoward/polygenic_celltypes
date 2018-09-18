@@ -1,3 +1,4 @@
+library(homologene)
 library(readr)
 library(dplyr)
 library(reshape2)
@@ -12,7 +13,8 @@ colnames(table) <- c(unlist(table[2,1:7]), unlist(table[1, 8:ncol(table)]))
 table <- table[-c(1,2),]
 
 # columns to drop
-dropcols <- c('Accession', '_LogCV', '_LogMean', '_Selected', '_Total', '_Valid', 'ClusterName', NA)
+table <- table[!is.na(names(table))]
+dropcols <- c('Accession', '_LogCV', '_LogMean', '_Selected', '_Total', '_Valid', 'ClusterName')
 table %<>% select(-one_of(dropcols))
 
 #to change all but the 'Gene' column name into numeric type
@@ -44,10 +46,19 @@ linnarsson %<>% group_by(Gene, cluster_id) %>% summarize(
 linnarsson %<>% group_by(cluster_id)
 linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZ)) %>% select(-log1ExpZ)
 
-linnarssonMatrix <- dcast(linnarsson, Gene ~ cluster_id, value.var = "log1ExpZRank")
-rownames(linnarssonMatrix) <- linnarssonMatrix$Gene
-linnarssonMatrix$Gene <- NULL
+linnarssonMatrixMouse <- dcast(linnarsson, Gene ~ cluster_id, value.var = "log1ExpZRank")
+rownames(linnarssonMatrixMouse) <- linnarssonMatrixMouse$Gene
+linnarssonMatrixMouse$Gene <- NULL
 
-save(linnarssonMatrix, file='processed_zeisel.Rdata')
+#repeat code again after filtering for mouse genes that can be reached via human symbols (should be refactored)
+unique_genes_all <- rownames(linnarssonMatrix)
+unique_genes_human_reachable <- mouse2human(unique_genes_all)$mouseGene
+linnarsson %<>% filter(Gene %in% unique_genes_human_reachable) 
+linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZRank)) #rerank after filtering
 
+linnarssonMatrixHumanReachable <- dcast(linnarsson, Gene ~ cluster_id, value.var = "log1ExpZRank")
+rownames(linnarssonMatrixHumanReachable) <- linnarssonMatrixHumanReachable$Gene
+linnarssonMatrixHumanReachable$Gene <- NULL
+
+save(linnarssonMatrixMouse, linnarssonMatrixHumanReachable, file='processed_zeisel.Rdata')
 
