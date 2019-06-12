@@ -55,7 +55,11 @@ ui <- fluidPage(
                     rows=7),
       selectInput('species', 'Species:',
                   choices=c('Mouse', 'Human')),
-      actionButton("submit", "Submit")
+      actionButton("submit", "Submit"),
+      br(),
+      br(),
+      downloadButton(outputId = "download_data", label = "Download results as .csv")
+      
     ),
     
     # Main panel for displaying outputs ----
@@ -175,6 +179,15 @@ server <- function(input, output) {
     }, height=188, width = 922)
     
     shinyjs::enable("submit")
+    
+    output$download_data <-
+      downloadHandler(
+        filename = "polygenic_cell_types_AUC_results.csv",
+        content = function(file) {
+          write_csv(wilcoxTests, file)
+        }
+      )
+    
   }
   
   
