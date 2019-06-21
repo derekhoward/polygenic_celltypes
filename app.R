@@ -100,6 +100,7 @@ server <- function(input, output) {
   observeEvent(input$submit, {
     shinyjs::hide("main")
     shinyjs::disable("submit") 
+    shinyjs::disable("download_data")
     start <- Sys.time()
     cleaned_gene_list <- isolate(process_input_genes(input$genelist))
     
@@ -179,6 +180,7 @@ server <- function(input, output) {
     }, height=188, width = 922)
     
     shinyjs::enable("submit")
+    sinyjs::enable("download_data")
     
     output$download_data <-
       downloadHandler(
