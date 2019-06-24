@@ -59,14 +59,13 @@ ui <- fluidPage(
       br(),
       br(),
       downloadButton(outputId = "download_data", label = "Download results as .csv")
-      
     ),
     
     # Main panel for displaying outputs ----
     mainPanel(
       div(id = "main",
       p("This tool is made possible by data and the dendrogram from:"),
-      a("Molecular architecture of the mouse nervous system", href="https://doi.org/10.1101/294918"),
+      a("Molecular architecture of the mouse nervous system", href="http://dx.doi.org/10.1016/j.cell.2018.06.021"),
       p(" by Amit Zeisel, Hannah Hochgerner, Peter Lonnerberg, Anna Johnsson, Fatima Memic, Job van der Zwan, Martin Haring, Emelie Braun, Lars Borm, Gioele La Manno, Simone Codeluppi, Alessandro Furlan, Nathan Skene, Kenneth D Harris, Jens Hjerling Leffler, Ernest Arenas, Patrik Ernfors, Ulrika Marklund, and Sten Linnarsson."),
       br(),
       p("This tool was made by Derek Howard, Navona Calarco and Leon French during BrainHack 2018 Toronto."),
@@ -90,6 +89,7 @@ ui <- fluidPage(
 # Define server logic process and output top celltypes ----
 server <- function(input, output) {
   output$summary <- renderPrint({
+    shinyjs::disable("download_data")
     cat(paste("cores set to", cores))
     cat("\nResults will load here when complete")
     cat("\n")
@@ -180,7 +180,7 @@ server <- function(input, output) {
     }, height=188, width = 922)
     
     shinyjs::enable("submit")
-    sinyjs::enable("download_data")
+    shinyjs::enable("download_data")
     
     output$download_data <-
       downloadHandler(
