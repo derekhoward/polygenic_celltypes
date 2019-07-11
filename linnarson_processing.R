@@ -1,11 +1,13 @@
 library(homologene)
 library(readr)
 library(dplyr)
+library(tidyr)
 library(reshape2)
 library(magrittr)
+library(here)
 getwd()
 
-table <- read_tsv('./l5_all.agg.tab', col_names = FALSE)
+table <- read_tsv(here('./l5_all.agg.tab'), col_names = FALSE)
 descriptions <- table[29, 9:273]
 
 table %<>% filter(!is.na(X1) | X8 == 'ClusterName')
@@ -23,7 +25,8 @@ table[,2:length(colnames(table))] %<>% lapply(function(x) as.numeric(as.characte
 cell_type_info <- rbind(colnames(table[2:266]), descriptions)
 cell_type_info <- t(cell_type_info)
 colnames(cell_type_info) <- c('cluster_id', 'description')
-write.csv(cell_type_info, file = "celltype_descriptions.csv", row.names=FALSE)
+cell_type_info <- as_tibble(cell_type_info)
+write_csv(cell_type_info, path = "celltype_descriptions.csv")
 #now melt
 linnarsson <- as_tibble(reshape2::melt(table, id.vars='Gene', variable.name='cluster_id', value.name='expression'))
 linnarsson %<>% mutate(log1Expression=log(1+expression))
@@ -39,19 +42,18 @@ print(dim(linnarsson))
 linnarsson %<>% select(-expression, -log1Expression)
 
 #some genes are duplicated - just average them
-linnarsson %<>% group_by(Gene, cluster_id) %>% summarize(
-  log1ExpZ = mean(log1ExpZ)
-)
-
+linnarsson %<>% group_by(Gene, cluster_id) %>% summarize(log1ExpZ = mean(log1ExpZ))
 linnarsson %<>% group_by(cluster_id)
 linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZ)) %>% select(-log1ExpZ)
 
+#test <- spread(linnarsson, cluster_id, log1ExpZRank)
 linnarssonMatrixMouse <- dcast(linnarsson, Gene ~ cluster_id, value.var = "log1ExpZRank")
+
 rownames(linnarssonMatrixMouse) <- linnarssonMatrixMouse$Gene
 linnarssonMatrixMouse$Gene <- NULL
 
 #repeat code again after filtering for mouse genes that can be reached via human symbols (should be refactored)
-unique_genes_all <- rownames(linnarssonMatrix)
+unique_genes_all <- rownames(linnarssonMatrixMouse)
 unique_genes_human_reachable <- mouse2human(unique_genes_all)$mouseGene
 linnarsson %<>% filter(Gene %in% unique_genes_human_reachable) 
 linnarsson %<>% mutate(log1ExpZRank = rank(log1ExpZRank)) #rerank after filtering
